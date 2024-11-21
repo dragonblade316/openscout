@@ -28,14 +28,23 @@ This data can be read by any team who has access to the server (including the no
 ## Features and TODO
 
 Easy to use RestApi: WIP.
+
 The Blue Alliance and Statbotics integration: done.
+
 Smart team assignments using FMS api: Auth problems.
+
 MongoDB database: working.
+
 Well-defined data structures: WIP.
+
 JSON Schemas: Not started.
+
 Per Team Auth: Not started (pretty easy I think).
+
 Easy Toml Configuration: Not Started.
+
 Callbacks and Webhooks: I will work on this if I have time and Axum supports it.
+
 Documentation: I have not figured out what this will look like yet.
 
 ## Versioning Scheme
