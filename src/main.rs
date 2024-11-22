@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use assignments::GameManager;
 use axum::{
+    extract,
     extract::Path,
     extract::State,
     http::StatusCode,
@@ -9,7 +10,11 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use data::{os_data::TeamMatchReport, DataManager, MatchNumber};
+use data::{
+    os_data::{TeamMatchReport, TeamPitReport},
+    DataManager, Eventdata, MatchNumber,
+};
+use log::warn;
 
 mod assignments;
 mod data;
@@ -22,33 +27,15 @@ async fn main() -> () {
     .await
     .unwrap();
 
-    dm.postTeamMatchData(TeamMatchReport {
-        team_number: 5461,
-        team_member: "teddy".to_string(),
-        match_number: MatchNumber::Qualifier(86),
-        notes: "something is probably broken".to_string(),
-        notes_speaker_auto: 1,
-        notes_speaker_teleop: 2,
-        notes_amp_teleop: 1,
-        endgame: data::os_data::Endgame::None,
-        team_spesific_data: None,
-    })
-    .await;
-
-    println!(
-        "{:?}",
-        dm.get_team_match_data(5461, MatchNumber::Qualifier(13))
-            .await
-            .unwrap()
-    );
-
     let app: Router<()> = Router::new()
         .route("/matchdata/:matchnum", get(get_match_data))
         .route("/teamdata/:teamnum", get(get_team_data))
+        .route("/teammatchdata", post(post_team_match_data))
         .route(
-            "/teammatchdata",
-            get(get_team_match_data).post(post_team_match_data),
+            "/teammatchdata/:teamnum/:matchnum/:event",
+            get(get_team_match_data),
         )
+        .route("/event_list", get(get_event_list))
         .with_state(dm)
         .route("/scoutassignment", get(get_scouting_assignment));
 
@@ -60,6 +47,7 @@ async fn main() -> () {
 //async fn get_event_data() {}
 
 async fn get_match_data() {}
+
 async fn get_team_data(
     Path(team): Path<u32>,
     State(dm): State<DataManager>,
@@ -67,11 +55,28 @@ async fn get_team_data(
     Ok(Json(dm.getTeamData(team).await?))
 }
 
-async fn post_team_match_data() {}
-async fn post_team_pit_data() {}
+async fn post_team_match_data(
+    State(dm): State<DataManager>,
+    extract::Json(data): extract::Json<TeamMatchReport>,
+) -> Result<(), AppError> {
+    dm.postTeamMatchData(data).await?;
+    Ok(())
+}
+async fn post_team_pit_data(
+    State(dm): State<DataManager>,
+    extract::Json(data): extract::Json<TeamPitReport>,
+) -> Result<(), AppError> {
+    //dm.postTeamPitData(data).await?;
+    Ok(())
+}
 async fn get_team_match_data() {}
 
 async fn get_scouting_assignment() {}
+
+#[axum::debug_handler]
+async fn get_event_list(State(dm): State<DataManager>) -> Result<Json<Vec<Eventdata>>, AppError> {
+    Ok(Json(dm.get_event_data().await?))
+}
 
 //figure out vergen
 async fn get_server_spec() {}

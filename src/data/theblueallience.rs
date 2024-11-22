@@ -3,7 +3,7 @@ use log::info;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use super::{Allience, MatchNumber};
+use super::{Allience, Eventdata, MatchNumber};
 
 #[derive(Clone)]
 pub struct TheBlueAllience {
@@ -111,6 +111,23 @@ impl TheBlueAllience {
             red_score_breakdown: match_request.score_breakdown.red,
             blue_score_breakdown: match_request.score_breakdown.blue,
         })
+    }
+
+    pub async fn get_event_list(&self) -> Result<Vec<Eventdata>> {
+        let event_request = self
+            .client
+            //TODO: set a single place to define the year
+            .get(format!(
+                "https://www.thebluealliance.com/api/v3/events/2024",
+            ))
+            .header("X-TBA-Auth-Key", &self.key)
+            .send()
+            .await?
+            .error_for_status()?
+            .json::<Vec<Eventdata>>()
+            .await?;
+
+        Ok(event_request)
     }
 }
 

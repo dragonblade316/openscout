@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.92"
-axum = "0.7.7"
+axum = {version = "0.7.7", features = ["macros"]}
 chrono = "0.4.38"
 log = "0.4.22"
 mongodb = "3.1.0"

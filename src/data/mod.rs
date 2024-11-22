@@ -59,6 +59,10 @@ impl DataManager {
             .get_team_match_data(team_number, match_number)
             .await
     }
+
+    pub async fn get_event_data(&self) -> Result<Vec<Eventdata>> {
+        self.tba.get_event_list().await
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -90,4 +94,10 @@ pub enum Allience {
 pub enum WinningAllience {
     RED,
     BLUE,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Eventdata {
+    key: String,
+    name: String,
 }
