@@ -1,5 +1,3 @@
-use std::fmt::format;
-
 use anyhow::*;
 use serde::*;
 
@@ -42,16 +40,7 @@ impl Statbotics {
         event: String,
         match_number: MatchNumber,
     ) -> Result<StatboticsMatchData> {
-        let event_match = format!(
-            "{}_{}",
-            event,
-            match match_number {
-                MatchNumber::Practice(num) => format!("p{}", num),
-                MatchNumber::Qualifier(num) => format!("{}", num),
-                MatchNumber::Playoff(num) => "".to_string(),
-                MatchNumber::Final(num) => "".to_string(),
-            }
-        );
+        let event_match = format!("{}_{}", event, match_number.get_tba_string()?);
 
         let request = self
             .client

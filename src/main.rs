@@ -1,20 +1,11 @@
-use std::collections::HashMap;
-
-use assignments::GameManager;
 use axum::{
-    extract,
-    extract::Path,
-    extract::State,
-    http::StatusCode,
+    extract::{self, Path, State},
+    http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
     routing::{get, post},
     Json, Router,
 };
-use data::{
-    os_data::{TeamMatchReport, TeamPitReport},
-    DataManager, Eventdata, MatchNumber,
-};
-use log::warn;
+use data::{DataManager, Eventdata, TeamMatchReport, TeamPitReport};
 
 mod assignments;
 mod data;
@@ -29,15 +20,18 @@ async fn main() -> () {
 
     let app: Router<()> = Router::new()
         .route("/matchdata/:matchnum", get(get_match_data))
-        .route("/teamdata/:teamnum", get(get_team_data))
+        .route("/teamdata/:teamnum/:event", get(get_team_data))
         .route("/teammatchdata", post(post_team_match_data))
         .route(
             "/teammatchdata/:teamnum/:matchnum/:event",
             get(get_team_match_data),
         )
+        .route("/teampitdata", post(post_team_pit_data))
+        .route("/teampitdata/:teamnum/:event", get(get_team_pit_data))
         .route("/event_list", get(get_event_list))
         .with_state(dm)
-        .route("/scoutassignment", get(get_scouting_assignment));
+        .route("/scoutassignment", get(get_scouting_assignment))
+        .route("/version", get(get_server_version));
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8000").await.unwrap();
     axum::serve(listener, app).await.unwrap();
@@ -50,9 +44,10 @@ async fn get_match_data() {}
 
 async fn get_team_data(
     Path(team): Path<u32>,
+    Path(event): Path<String>,
     State(dm): State<DataManager>,
 ) -> Result<Json<data::TeamData>, AppError> {
-    Ok(Json(dm.getTeamData(team).await?))
+    Ok(Json(dm.getTeamData(team, event).await?))
 }
 
 async fn post_team_match_data(
@@ -71,15 +66,39 @@ async fn post_team_pit_data(
 }
 async fn get_team_match_data() {}
 
+async fn get_team_pit_data() {}
+
 async fn get_scouting_assignment() {}
 
 #[axum::debug_handler]
 async fn get_event_list(State(dm): State<DataManager>) -> Result<Json<Vec<Eventdata>>, AppError> {
     Ok(Json(dm.get_event_data().await?))
 }
+//
+//async fn add_user(headers: HeaderMap) -> Result<(), StatusCode> {
+//    match check_auth(headers).unwrap_or(return Err(StatusCode::BAD_REQUEST)) {
+//        AuthLevel::ADMIN => {}
+//        _ => return Err(StatusCode::UNAUTHORIZED),
+//    };
+//}
 
 //figure out vergen
-async fn get_server_spec() {}
+async fn get_server_version() -> &'static str {
+    env!("CARGO_PKG_VERSION")
+}
+
+enum AuthLevel {
+    ADMIN,
+    TEAM,
+    NONE,
+}
+
+fn check_auth(headers: HeaderMap) -> anyhow::Result<AuthLevel, ()> {
+    let team_number = headers.get("id").unwrap_or(return Err(()));
+    let key = headers.get("key").unwrap_or(return Err(()));
+
+    todo!()
+}
 
 // Make our own error that wraps `anyhow::Error`.
 struct AppError(anyhow::Error);

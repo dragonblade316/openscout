@@ -1,7 +1,7 @@
 use anyhow::*;
 use log::info;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::{collections::HashMap, iter::zip};
 
 use super::{Allience, Eventdata, MatchNumber};
 
@@ -9,17 +9,12 @@ use super::{Allience, Eventdata, MatchNumber};
 pub struct TheBlueAllience {
     client: reqwest::Client,
     key: String,
-
-    //TODO: replace this field with arguments
-    tba_event_name: String,
 }
 
 impl TheBlueAllience {
     pub async fn new(key: String) -> Result<Self> {
         let tba = Self {
             client: reqwest::Client::new(),
-            //why is this the idaho event key
-            tba_event_name: "2024idbo".to_string(),
             key,
         };
         tba.check().await?;
@@ -41,13 +36,13 @@ impl TheBlueAllience {
         Ok(())
     }
 
-    pub async fn get_team_data(&self, team_num: u32) -> Result<TbaTeamdata> {
+    pub async fn get_team_data(&self, team_num: u32, event: String) -> Result<TbaTeamdata> {
         info!("requesting opr data from tba");
         let opr_request = self
             .client
             .get(format!(
                 "https://www.thebluealliance.com/api/v3/event/{}/oprs",
-                self.tba_event_name
+                event
             ))
             .header("X-TBA-Auth-Key", &self.key)
             .send()
@@ -78,21 +73,18 @@ impl TheBlueAllience {
         })
     }
 
-    pub async fn get_match_data(&self, match_number: MatchNumber) -> Result<TbaMatchData> {
-        let match_key = format!(
-            "{}{}",
-            self.tba_event_name,
-            match match_number {
-                MatchNumber::Qualifier(num) => format!("_qm{}", num),
-                _ => "".to_string(),
-            }
-        );
+    pub async fn get_match_data(
+        &self,
+        match_number: MatchNumber,
+        event: String,
+    ) -> Result<TbaMatchData> {
+        let match_key = format!("{}_{}", event, match_number.get_tba_string()?);
 
         let match_request = self
             .client
             .get(format!(
                 "https://www.thebluealliance.com/api/v3/match/{}/",
-                self.tba_event_name
+                match_key
             ))
             .header("X-TBA-Auth-Key", &self.key)
             .send()
@@ -103,9 +95,13 @@ impl TheBlueAllience {
 
         Ok(TbaMatchData {
             match_number,
-            winning_allience: Some(Allience::RED),
-            red_allience: [1, 2, 3],
-            blue_allience: [1, 2, 3],
+            winning_allience: match (match_request.winning_alliance.as_str()) {
+                "red" => Some(Allience::RED),
+                "blue" => Some(Allience::BLUE),
+                _ => None,
+            },
+            red_allience: match_request.alliences.red.get_team_nums(),
+            blue_allience: match_request.alliences.blue.get_team_nums(),
             red_score: match_request.alliences.red.score,
             blue_score: match_request.alliences.blue.score,
             red_score_breakdown: match_request.score_breakdown.red,
@@ -140,7 +136,6 @@ pub struct TbaTeamdata {
 
 pub struct TbaMatchData {
     match_number: MatchNumber,
-    //None if tie? TODO: figure this out
     winning_allience: Option<Allience>,
     red_allience: [u32; 3],
     blue_allience: [u32; 3],
@@ -176,6 +171,25 @@ struct TbaSerdeAllience {
     score: u32,
     team_keys: Vec<String>,
 }
+
+impl TbaSerdeAllience {
+    fn get_team_nums(&self) -> [u32; 3] {
+        let mut numbers: [u32; 3] = [0; 3];
+
+        for (i, j) in zip(0..2, &self.team_keys) {
+            numbers[i] = j
+                .chars()
+                .into_iter()
+                .filter(|&n| n.is_numeric())
+                .collect::<String>()
+                .parse::<u32>()
+                .expect("this should be a number")
+        }
+
+        numbers
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 struct TbaSerdeScoreBreakdowns {
     red: TbaScoreBreakdown,

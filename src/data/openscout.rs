@@ -1,12 +1,9 @@
-use std::fmt::write;
-
 use anyhow::*;
 
 use super::{
-    os_data::{self, TeamMatchReport, TeamPitReport},
+    super::{TeamMatchReport, TeamPitReport},
     MatchNumber,
 };
-use log::warn;
 use mongodb::{self, bson::doc, Collection};
 use mongodb::{
     options::{ClientOptions, ServerApi, ServerApiVersion},
@@ -19,7 +16,7 @@ pub struct OpenScoutDB {
     match_collection: Collection<TeamMatchReport>,
     pit_collection: Collection<TeamPitReport>,
 }
-
+//TODO: going to need to figure out if the database will just be one big data base or per event db
 impl OpenScoutDB {
     pub async fn new() -> Result<Self> {
         // Replace the placeholder with your Atlas connection string
@@ -49,12 +46,12 @@ impl OpenScoutDB {
     }
 
     //ngl this was easier than expected
-    pub async fn post_team_match_data(&self, data: os_data::TeamMatchReport) -> Result<()> {
+    pub async fn post_team_match_data(&self, data: TeamMatchReport) -> Result<()> {
         self.match_collection.insert_one(data).await?;
         Ok(())
     }
 
-    pub async fn post_team_pit_data(&self, data: os_data::TeamPitReport) -> Result<()> {
+    pub async fn post_team_pit_data(&self, data: TeamPitReport) -> Result<()> {
         self.pit_collection.insert_one(data).await?;
         Ok(())
     }
@@ -63,11 +60,12 @@ impl OpenScoutDB {
         &self,
         team: u32,
         match_number: MatchNumber,
+        event: String,
     ) -> Result<TeamMatchReport> {
         let (name, num) = match match_number {
             MatchNumber::Practice(num) => ("Practice", num),
             MatchNumber::Qualifier(num) => ("Qualifier", num),
-            MatchNumber::Playoff(num) => ("Playoff", num),
+            MatchNumber::Semifinal(num) => ("Semifinal", num),
             MatchNumber::Final(num) => ("Final", num),
         };
 
@@ -76,6 +74,21 @@ impl OpenScoutDB {
             .find(doc! {"$and": vec![
             doc! {"team_number": team},
             doc! {format!("match_number.{}", name): num},
+            doc! {"event": event},
+            ]})
+            .await?;
+
+        let close = data.deserialize_current()?;
+
+        Ok(close)
+    }
+
+    pub async fn get_team_pit_data(&self, team: u32, event: String) -> Result<TeamPitReport> {
+        let data = self
+            .pit_collection
+            .find(doc! {"$and": vec![
+            doc! {"team_number": team},
+            doc! {"event": event}
             ]})
             .await?;
 

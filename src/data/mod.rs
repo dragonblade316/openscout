@@ -1,11 +1,11 @@
 pub mod openscout;
-pub mod os_data; //data structs
+pub mod season; //data structs
 pub mod statbotics;
 pub mod theblueallience;
 
+use std::collections::HashMap;
+
 use anyhow::*;
-use log::warn;
-use os_data::TeamMatchReport;
 use serde::{Deserialize, Serialize};
 use statbotics::Statbotics;
 use theblueallience::TheBlueAllience;
@@ -18,6 +18,7 @@ pub struct DataManager {
     openscoutdb: openscout::OpenScoutDB,
     tba: theblueallience::TheBlueAllience,
     statbotics: statbotics::Statbotics,
+    //TODO: event list
 }
 
 impl DataManager {
@@ -29,8 +30,8 @@ impl DataManager {
         })
     }
 
-    pub async fn getTeamData(&self, team_number: u32) -> Result<TeamData> {
-        let tba_data = self.tba.get_team_data(team_number.clone()).await?;
+    pub async fn getTeamData(&self, team_number: u32, event: String) -> Result<TeamData> {
+        let tba_data = self.tba.get_team_data(team_number.clone(), event).await?;
         let statbotics_data = self.statbotics.get_team_data(team_number.clone()).await?;
 
         Ok(TeamData {
@@ -54,9 +55,10 @@ impl DataManager {
         &self,
         team_number: u32,
         match_number: MatchNumber,
+        event: String,
     ) -> Result<TeamMatchReport> {
         self.openscoutdb
-            .get_team_match_data(team_number, match_number)
+            .get_team_match_data(team_number, match_number, event)
             .await
     }
 
@@ -77,21 +79,53 @@ pub struct TeamData {
     norm_epa: f64,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct TeamMatchReport {
+    //unchanging
+    pub team_number: u32,
+    pub team_member: String,
+
+    pub event: String,
+    pub match_number: MatchNumber,
+
+    pub notes: String,
+
+    pub data: season::MatchData2024,
+
+    //does not change but should still never be accessed
+    pub team_spesific_data: Option<HashMap<String, serde_json::Value>>,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct TeamPitReport {
+    team_number: u32,
+    team_member: String,
+    event: String,
+
+    data: season::PitData2024,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub enum MatchNumber {
     Practice(u32),
     Qualifier(u32),
-    Playoff(u32),
+    Semifinal(u32),
     Final(u32),
+}
+
+impl MatchNumber {
+    pub fn get_tba_string(&self) -> Result<String> {
+        match self {
+            Self::Practice(num) => return Err(anyhow!("Practice matches are not recorded by tba")),
+            Self::Qualifier(num) => Ok(format!("q{}", num)),
+            Self::Semifinal(num) => Ok(format!("sf{}m1", num)),
+            Self::Final(num) => Ok(format!("f{}", num)),
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Allience {
-    RED,
-    BLUE,
-}
-
-pub enum WinningAllience {
     RED,
     BLUE,
 }
