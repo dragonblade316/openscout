@@ -79,6 +79,8 @@ pub struct TeamData {
     norm_epa: f64,
 }
 
+pub struct MatchData {}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TeamMatchReport {
     //unchanging
