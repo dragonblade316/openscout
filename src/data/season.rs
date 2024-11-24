@@ -3,12 +3,10 @@
 //! Values contained in the sturcts of these files should never be accessed by anything other than
 //! serde.
 
+use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
-use super::MatchNumber;
-
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, JsonSchema, Debug)]
 pub struct MatchData2024 {
     pub notes_speaker_auto: u32,
     pub notes_speaker_teleop: u32,
@@ -16,7 +14,7 @@ pub struct MatchData2024 {
     pub endgame: Endgame,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, JsonSchema)]
 pub struct PitData2024 {
     speaker: bool,
     amp: bool,
@@ -29,7 +27,7 @@ pub struct PitData2024 {
 }
 
 // yearly support enums, do not use outside of team match report.
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, JsonSchema, Debug)]
 pub enum Endgame {
     ClimbAndTrap,
     Climb,
@@ -37,7 +35,7 @@ pub enum Endgame {
     None,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, JsonSchema)]
 pub enum Drivebase {
     Differential,
     Mecanum,

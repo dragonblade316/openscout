@@ -35,7 +35,7 @@ Smart team assignments using FMS api: Auth problems.
 
 MongoDB database: working.
 
-Well-defined data structures: WIP.
+Well-defined data structures: Done (probably).
 
 JSON Schemas: Not started.
 
@@ -55,7 +55,7 @@ WIP
 
 Will there be an official openscout client: Probably not, the project is designed to require as little effort to maintain as possible and dealing with a changing UI would go against that. However, I am hoping to have at least one team make their scouting app open source. This will mean that teams should have access to an Openscout client even if they dod not have the resources to make their own.
 
-Can we prevent other teams from querying our scouting data: By hosting your own instance and not allowing other teams to access it, yes. However, the server itself will (most likely) not support any form of access control. 
+Can we prevent other teams from querying our scouting data: By hosting your own instance and not allowing other teams to access it, yes. However, the server itself will (most likely) not support any form of access control. WIP
 
 How do you decide the default fields: Mostly guessing and asking teams. Major version changes may change the schema to make it more useful for teams at the cost of teams having to update their scouting apps.
 

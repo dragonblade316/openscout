@@ -61,12 +61,18 @@ async fn post_team_pit_data(
     State(dm): State<DataManager>,
     extract::Json(data): extract::Json<TeamPitReport>,
 ) -> Result<(), AppError> {
-    //dm.postTeamPitData(data).await?;
+    dm.post_team_pit_data(data).await?;
     Ok(())
 }
 async fn get_team_match_data() {}
 
-async fn get_team_pit_data() {}
+#[axum::debug_handler]
+async fn get_team_pit_data(
+    State(dm): State<DataManager>,
+    Path((team_num, event)): Path<(u32, String)>,
+) -> Result<Json<TeamPitReport>, AppError> {
+    Ok(Json(dm.get_team_pit_data(team_num, event).await?))
+}
 
 async fn get_scouting_assignment() {}
 

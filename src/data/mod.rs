@@ -2,6 +2,7 @@ pub mod openscout;
 pub mod season; //data structs
 pub mod statbotics;
 pub mod theblueallience;
+use schemars::{schema_for, JsonSchema};
 
 use std::collections::HashMap;
 
@@ -51,6 +52,11 @@ impl DataManager {
         Ok(())
     }
 
+    pub async fn post_team_pit_data(&self, data: TeamPitReport) -> Result<()> {
+        self.openscoutdb.post_team_pit_data(data);
+        Ok(())
+    }
+
     pub async fn get_team_match_data(
         &self,
         team_number: u32,
@@ -60,6 +66,14 @@ impl DataManager {
         self.openscoutdb
             .get_team_match_data(team_number, match_number, event)
             .await
+    }
+
+    pub async fn get_team_pit_data(
+        &self,
+        team_number: u32,
+        event: String,
+    ) -> Result<TeamPitReport> {
+        self.openscoutdb.get_team_pit_data(team_number, event).await
     }
 
     pub async fn get_event_data(&self) -> Result<Vec<Eventdata>> {
@@ -81,7 +95,7 @@ pub struct TeamData {
 
 pub struct MatchData {}
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, JsonSchema, Debug)]
 pub struct TeamMatchReport {
     //unchanging
     pub team_number: u32,
@@ -107,7 +121,7 @@ pub struct TeamPitReport {
     data: season::PitData2024,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub enum MatchNumber {
     Practice(u32),
     Qualifier(u32),
@@ -118,7 +132,9 @@ pub enum MatchNumber {
 impl MatchNumber {
     pub fn get_tba_string(&self) -> Result<String> {
         match self {
-            Self::Practice(num) => return Err(anyhow!("Practice matches are not recorded by tba")),
+            Self::Practice(_num) => {
+                return Err(anyhow!("Practice matches are not recorded by tba"))
+            }
             Self::Qualifier(num) => Ok(format!("q{}", num)),
             Self::Semifinal(num) => Ok(format!("sf{}m1", num)),
             Self::Final(num) => Ok(format!("f{}", num)),

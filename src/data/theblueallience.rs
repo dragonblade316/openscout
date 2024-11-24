@@ -95,7 +95,7 @@ impl TheBlueAllience {
 
         Ok(TbaMatchData {
             match_number,
-            winning_allience: match (match_request.winning_alliance.as_str()) {
+            winning_allience: match match_request.winning_alliance.as_str() {
                 "red" => Some(Allience::RED),
                 "blue" => Some(Allience::BLUE),
                 _ => None,
