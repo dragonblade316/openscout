@@ -65,7 +65,10 @@ pub struct StatboticsTeamData {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct StatboticsMatchData {}
+pub struct StatboticsMatchData {
+    pub pred: StatboticsPrediction,
+    pub result: StatboticsResult,
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EPA {
@@ -79,19 +82,19 @@ pub struct EPA {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct StatboticsPrediction {
-    winner: Option<Allience>, //might need to figure this out.
-    red_win_prob: f64,
-    red_score: f64,
-    blue_score: f64,
+pub struct StatboticsPrediction {
+    pub winner: Option<Allience>, //might need to figure this out.
+    pub red_win_prob: f64,
+    pub red_score: f64,
+    pub blue_score: f64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct StatboticsResult {
-    winner: Option<Allience>,
-    red_score: f64,
-    blue_score: f64,
-    red_no_foul: f64,
-    blue_no_foul: f64,
+pub struct StatboticsResult {
+    pub winner: Option<Allience>,
+    pub red_score: f64,
+    pub blue_score: f64,
+    pub red_no_foul: f64,
+    pub blue_no_foul: f64,
     //there are more fields but they are mostly handled by the tba api so I'm going to ignore them
 }

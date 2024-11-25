@@ -2,6 +2,10 @@ pub mod openscout;
 pub mod season; //data structs
 pub mod statbotics;
 pub mod theblueallience;
+use axum::{http::HeaderMap, response::IntoResponse};
+use log::warn;
+use openscout::{Auth, AuthLevel, MongoAuth};
+use reqwest::StatusCode;
 use schemars::{schema_for, JsonSchema};
 
 use std::collections::HashMap;
@@ -9,7 +13,7 @@ use std::collections::HashMap;
 use anyhow::*;
 use serde::{Deserialize, Serialize};
 use statbotics::Statbotics;
-use theblueallience::TheBlueAllience;
+use theblueallience::{TbaScoreBreakdown, TheBlueAllience};
 
 //TODO: set a client here so that the connection pool is shared by all there services (or not, I
 //don't think there would be a benifit to this)
@@ -23,15 +27,15 @@ pub struct DataManager {
 }
 
 impl DataManager {
-    pub async fn new(tba_key: String) -> Result<Self> {
+    pub async fn new(tba_key: String, mongo_auth: Option<MongoAuth>) -> Result<Self> {
         Ok(Self {
-            openscoutdb: openscout::OpenScoutDB::new().await?,
+            openscoutdb: openscout::OpenScoutDB::new(None, mongo_auth).await?,
             tba: TheBlueAllience::new(tba_key).await?,
             statbotics: Statbotics::new().await?,
         })
     }
 
-    pub async fn getTeamData(&self, team_number: u32, event: String) -> Result<TeamData> {
+    pub async fn get_team_data(&self, team_number: u32, event: String) -> Result<TeamData> {
         let tba_data = self.tba.get_team_data(team_number.clone(), event).await?;
         let statbotics_data = self.statbotics.get_team_data(team_number.clone()).await?;
 
@@ -47,13 +51,42 @@ impl DataManager {
         })
     }
 
-    pub async fn postTeamMatchData(&self, data: TeamMatchReport) -> Result<()> {
+    pub async fn get_match_data(&self, event: String, match_num: MatchNumber) -> Result<MatchData> {
+        let tba_data = self
+            .tba
+            .get_match_data(match_num.clone(), event.clone())
+            .await?;
+        let statbotics_data = self
+            .statbotics
+            .get_match_data(event.clone(), match_num.clone())
+            .await?;
+
+        MatchData {
+            winner: tba_data.winning_allience,
+            predicted_winner: statbotics_data.pred.winner,
+            red_win_prob: statbotics_data.pred.red_win_prob,
+            red_allience: tba_data.red_allience,
+            blue_allience: tba_data.blue_allience,
+            red_score: tba_data.red_score,
+            blue_score: tba_data.blue_score,
+            red_score_breakdown: tba_data.red_score_breakdown,
+            blue_score_breakdown: tba_data.blue_score_breakdown,
+            predicted_red_score: statbotics_data.pred.red_score,
+            predicted_blue_score: statbotics_data.pred.blue_score,
+            event,
+            match_number: match_num,
+        };
+
+        todo!()
+    }
+
+    pub async fn post_team_match_data(&self, data: TeamMatchReport) -> Result<()> {
         self.openscoutdb.post_team_match_data(data).await?;
         Ok(())
     }
 
     pub async fn post_team_pit_data(&self, data: TeamPitReport) -> Result<()> {
-        self.openscoutdb.post_team_pit_data(data);
+        self.openscoutdb.post_team_pit_data(data).await?;
         Ok(())
     }
 
@@ -79,6 +112,35 @@ impl DataManager {
     pub async fn get_event_data(&self) -> Result<Vec<Eventdata>> {
         self.tba.get_event_list().await
     }
+
+    pub async fn check_auth(&self, headers: &HeaderMap, required_auth: AuthLevel) -> Result<()> {
+        //it is the destiny of all my codebases to have some annoying ugly as crap code to convert
+        //things to the correct datatype
+        //TODO: give this actual errors
+        let team: u32 = headers
+            .get("id")
+            .unwrap_or(return Err(anyhow!("")))
+            .to_str()?
+            .parse()?;
+        let key: String = headers
+            .get("key")
+            .unwrap_or(return Err(anyhow!("")))
+            .to_str()?
+            .to_string();
+
+        let auth = self.openscoutdb.check_auth(team).await?;
+
+        if key != auth.key || auth.auth < required_auth {
+            return Err(anyhow!(StatusCode::UNAUTHORIZED));
+        }
+
+        Ok(())
+    }
+
+    pub async fn add_user(&self, auth: Auth) -> Result<()> {
+        self.openscoutdb.add_auth(auth).await?;
+        Ok(())
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -93,7 +155,22 @@ pub struct TeamData {
     norm_epa: f64,
 }
 
-pub struct MatchData {}
+#[derive(Serialize, Deserialize, JsonSchema, Debug)]
+pub struct MatchData {
+    winner: Option<Allience>,
+    predicted_winner: Option<Allience>,
+    red_win_prob: f64,
+    red_allience: [u32; 3],
+    blue_allience: [u32; 3],
+    red_score: u32,
+    blue_score: u32,
+    red_score_breakdown: TbaScoreBreakdown,
+    blue_score_breakdown: TbaScoreBreakdown,
+    predicted_red_score: f64,
+    predicted_blue_score: f64,
+    event: String,
+    match_number: MatchNumber,
+}
 
 #[derive(Serialize, Deserialize, JsonSchema, Debug)]
 pub struct TeamMatchReport {
@@ -121,28 +198,32 @@ pub struct TeamPitReport {
     data: season::PitData2024,
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub enum MatchNumber {
-    Practice(u32),
-    Qualifier(u32),
-    Semifinal(u32),
-    Final(u32),
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub enum Complevel {
+    Practice,
+    Qualifier,
+    Semifinal,
+    Final,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct MatchNumber {
+    pub number: u32,
+    pub level: Complevel,
 }
 
 impl MatchNumber {
     pub fn get_tba_string(&self) -> Result<String> {
-        match self {
-            Self::Practice(_num) => {
-                return Err(anyhow!("Practice matches are not recorded by tba"))
-            }
-            Self::Qualifier(num) => Ok(format!("q{}", num)),
-            Self::Semifinal(num) => Ok(format!("sf{}m1", num)),
-            Self::Final(num) => Ok(format!("f{}", num)),
+        match self.level {
+            Complevel::Practice => return Err(anyhow!("Practice matches are not recorded by tba")),
+            Complevel::Qualifier => Ok(format!("q{}", self.number)),
+            Complevel::Semifinal => Ok(format!("sf{}m1", self.number)),
+            Complevel::Final => Ok(format!("f1m{}", self.number)),
         }
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub enum Allience {
     RED,
     BLUE,

@@ -49,7 +49,18 @@ Documentation: I have not figured out what this will look like yet.
 
 ## Versioning Scheme
 
-WIP
+The version is split into 4 parts, Season, Major, Minor, and Tag
+
+Versions of openscout from different seasons are not compadible as the season spesific datatypes have been replaced.
+
+
+Season will change every season (hopefully this was obvious)
+
+A change of the major version implies breaking changes to the api or significant new fetures.
+
+A change to the minor version implies bug fixes or fetures that will not break the current api.
+
+The tag will either be WIP, Alpha, Beta, Nightly, and Stable. This will indicate how confident I am that everything will work. WIP and Alpha will likely never be seen again after the 1st beta.
 
 ## FAQ
 
@@ -60,3 +71,7 @@ Can we prevent other teams from querying our scouting data: By hosting your own 
 How do you decide the default fields: Mostly guessing and asking teams. Major version changes may change the schema to make it more useful for teams at the cost of teams having to update their scouting apps.
 
 Did anyone actually ask: No, I made these up.
+
+## Contributing
+If you want to contribute to this project feel free to open an issue, submit a pull request, or contact me.
+You will be able to find me on Cheif Delphi and the FRC Scouting and Statagy discord server. (I am dragonblade316 on both)

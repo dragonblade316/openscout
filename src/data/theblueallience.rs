@@ -1,5 +1,6 @@
 use anyhow::*;
 use log::info;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, iter::zip};
 
@@ -135,14 +136,14 @@ pub struct TbaTeamdata {
 }
 
 pub struct TbaMatchData {
-    match_number: MatchNumber,
-    winning_allience: Option<Allience>,
-    red_allience: [u32; 3],
-    blue_allience: [u32; 3],
-    red_score: u32,
-    blue_score: u32,
-    red_score_breakdown: TbaScoreBreakdown,
-    blue_score_breakdown: TbaScoreBreakdown,
+    pub match_number: MatchNumber,
+    pub winning_allience: Option<Allience>,
+    pub red_allience: [u32; 3],
+    pub blue_allience: [u32; 3],
+    pub red_score: u32,
+    pub blue_score: u32,
+    pub red_score_breakdown: TbaScoreBreakdown,
+    pub blue_score_breakdown: TbaScoreBreakdown,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -190,12 +191,12 @@ impl TbaSerdeAllience {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 struct TbaSerdeScoreBreakdowns {
     red: TbaScoreBreakdown,
     blue: TbaScoreBreakdown,
 }
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct TbaScoreBreakdown {
     auto_points: u32,
     teleop_points: u32,
