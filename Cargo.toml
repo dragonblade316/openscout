@@ -17,4 +17,7 @@ serde_json = "1.0.132"
 simplelog = "0.12.2"
 tokio = { version = "1.41.0", features = ["macros", "rt-multi-thread"] }
 toml = "0.8.19"
+utoipa = { version = "5.2.0", features = ["axum_extras"] }
+utoipa-axum = "0.1.2"
+utoipa-swagger-ui = { version = "8.0.3", features = ["axum"] }
 vergen = { version = "9.0.1", features = ["build"] }

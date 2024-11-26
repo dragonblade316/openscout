@@ -64,6 +64,7 @@ pub struct StatboticsTeamData {
     pub epa: EPA,
 }
 
+#[allow(nonstandard_style)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct StatboticsMatchData {
     pub pred: StatboticsPrediction,
@@ -80,7 +81,7 @@ pub struct EPA {
     //I am NOT doing the point breakdown. not only is it season spesific, but the tba
     //scorebreakdown was already hard enough.
 }
-
+#[allow(nonstandard_style)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct StatboticsPrediction {
     pub winner: Option<Allience>, //might need to figure this out.
@@ -89,6 +90,7 @@ pub struct StatboticsPrediction {
     pub blue_score: f64,
 }
 
+#[allow(nonstandard_style)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct StatboticsResult {
     pub winner: Option<Allience>,

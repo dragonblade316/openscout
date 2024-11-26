@@ -7,6 +7,7 @@ use log::warn;
 use openscout::{Auth, AuthLevel, MongoAuth};
 use reqwest::StatusCode;
 use schemars::{schema_for, JsonSchema};
+use utoipa::ToSchema;
 
 use std::collections::HashMap;
 
@@ -23,15 +24,20 @@ pub struct DataManager {
     openscoutdb: openscout::OpenScoutDB,
     tba: theblueallience::TheBlueAllience,
     statbotics: statbotics::Statbotics,
-    //TODO: event list
+    enable_auth: bool, //TODO: event list
 }
 
 impl DataManager {
-    pub async fn new(tba_key: String, mongo_auth: Option<MongoAuth>) -> Result<Self> {
+    pub async fn new(
+        tba_key: String,
+        mongo_auth: Option<MongoAuth>,
+        enable_auth: Option<bool>,
+    ) -> Result<Self> {
         Ok(Self {
             openscoutdb: openscout::OpenScoutDB::new(None, mongo_auth).await?,
             tba: TheBlueAllience::new(tba_key).await?,
             statbotics: Statbotics::new().await?,
+            enable_auth: enable_auth.unwrap_or(true),
         })
     }
 
@@ -61,10 +67,11 @@ impl DataManager {
             .get_match_data(event.clone(), match_num.clone())
             .await?;
 
-        MatchData {
+        Ok(MatchData {
             winner: tba_data.winning_allience,
             predicted_winner: statbotics_data.pred.winner,
             red_win_prob: statbotics_data.pred.red_win_prob,
+            //TODO: there appears to be a bug where the thrid alliance is 0
             red_allience: tba_data.red_allience,
             blue_allience: tba_data.blue_allience,
             red_score: tba_data.red_score,
@@ -75,9 +82,7 @@ impl DataManager {
             predicted_blue_score: statbotics_data.pred.blue_score,
             event,
             match_number: match_num,
-        };
-
-        todo!()
+        })
     }
 
     pub async fn post_team_match_data(&self, data: TeamMatchReport) -> Result<()> {
@@ -114,17 +119,21 @@ impl DataManager {
     }
 
     pub async fn check_auth(&self, headers: &HeaderMap, required_auth: AuthLevel) -> Result<()> {
+        if !self.enable_auth {
+            return Ok(());
+        }
+
         //it is the destiny of all my codebases to have some annoying ugly as crap code to convert
         //things to the correct datatype
         //TODO: give this actual errors
         let team: u32 = headers
             .get("id")
-            .unwrap_or(return Err(anyhow!("")))
+            .unwrap_or(return Err(anyhow!(StatusCode::BAD_REQUEST)))
             .to_str()?
             .parse()?;
         let key: String = headers
             .get("key")
-            .unwrap_or(return Err(anyhow!("")))
+            .unwrap_or(return Err(anyhow!(StatusCode::BAD_REQUEST)))
             .to_str()?
             .to_string();
 
@@ -143,7 +152,7 @@ impl DataManager {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, ToSchema, Deserialize)]
 pub struct TeamData {
     team_number: u32,
 
@@ -155,7 +164,7 @@ pub struct TeamData {
     norm_epa: f64,
 }
 
-#[derive(Serialize, Deserialize, JsonSchema, Debug)]
+#[derive(Serialize, Deserialize, ToSchema, Debug)]
 pub struct MatchData {
     winner: Option<Allience>,
     predicted_winner: Option<Allience>,
@@ -172,7 +181,7 @@ pub struct MatchData {
     match_number: MatchNumber,
 }
 
-#[derive(Serialize, Deserialize, JsonSchema, Debug)]
+#[derive(Serialize, Deserialize, ToSchema, Debug)]
 pub struct TeamMatchReport {
     //unchanging
     pub team_number: u32,
@@ -189,7 +198,7 @@ pub struct TeamMatchReport {
     pub team_spesific_data: Option<HashMap<String, serde_json::Value>>,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, ToSchema)]
 pub struct TeamPitReport {
     team_number: u32,
     team_member: String,
@@ -198,7 +207,7 @@ pub struct TeamPitReport {
     data: season::PitData2024,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub enum Complevel {
     Practice,
     Qualifier,
@@ -206,7 +215,7 @@ pub enum Complevel {
     Final,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct MatchNumber {
     pub number: u32,
     pub level: Complevel,
@@ -216,20 +225,23 @@ impl MatchNumber {
     pub fn get_tba_string(&self) -> Result<String> {
         match self.level {
             Complevel::Practice => return Err(anyhow!("Practice matches are not recorded by tba")),
-            Complevel::Qualifier => Ok(format!("q{}", self.number)),
+            Complevel::Qualifier => Ok(format!("qm{}", self.number)),
             Complevel::Semifinal => Ok(format!("sf{}m1", self.number)),
             Complevel::Final => Ok(format!("f1m{}", self.number)),
         }
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub enum Allience {
+    //TODO: may want to fix this patchwork solution
+    #[serde(alias = "red")]
     RED,
+    #[serde(alias = "blue")]
     BLUE,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct Eventdata {
     key: String,
     name: String,

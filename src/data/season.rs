@@ -5,8 +5,9 @@
 
 use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
-#[derive(Deserialize, Serialize, JsonSchema, Debug)]
+#[derive(Deserialize, Serialize, ToSchema, Debug)]
 pub struct MatchData2024 {
     pub notes_speaker_auto: u32,
     pub notes_speaker_teleop: u32,
@@ -14,7 +15,7 @@ pub struct MatchData2024 {
     pub endgame: Endgame,
 }
 
-#[derive(Deserialize, Serialize, JsonSchema)]
+#[derive(Deserialize, Serialize, ToSchema)]
 pub struct PitData2024 {
     speaker: bool,
     amp: bool,
@@ -27,7 +28,7 @@ pub struct PitData2024 {
 }
 
 // yearly support enums, do not use outside of team match report.
-#[derive(Deserialize, Serialize, JsonSchema, Debug)]
+#[derive(Deserialize, Serialize, ToSchema, Debug)]
 pub enum Endgame {
     ClimbAndTrap,
     Climb,
@@ -35,7 +36,7 @@ pub enum Endgame {
     None,
 }
 
-#[derive(Deserialize, Serialize, JsonSchema)]
+#[derive(Deserialize, Serialize, ToSchema)]
 pub enum Drivebase {
     Differential,
     Mecanum,

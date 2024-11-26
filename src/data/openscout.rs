@@ -1,5 +1,7 @@
 use anyhow::*;
+use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 use super::{
     super::{TeamMatchReport, TeamPitReport},
@@ -87,7 +89,7 @@ impl OpenScoutDB {
 
         let data = self
             .match_collection
-            .find(doc! {"$and": vec![
+            .find_one(doc! {"$and": vec![
             doc! {"team_number": team},
             doc! {"match_number.number": num},
             doc! {"match_number.level": name},
@@ -95,23 +97,26 @@ impl OpenScoutDB {
             ]})
             .await?;
 
-        let close = data.deserialize_current()?;
-
-        Ok(close)
+        match data {
+            Some(data) => Ok(data),
+            None => Err(anyhow!(StatusCode::NO_CONTENT)),
+        }
     }
 
+    //TODO: check if there is data here and return the appropriet status code if not
     pub async fn get_team_pit_data(&self, team: u32, event: String) -> Result<TeamPitReport> {
         let data = self
             .pit_collection
-            .find(doc! {"$and": vec![
+            .find_one(doc! {"$and": vec![
             doc! {"team_number": team},
             doc! {"event": event}
             ]})
             .await?;
 
-        let close = data.deserialize_current()?;
-
-        Ok(close)
+        match data {
+            Some(data) => Ok(data),
+            None => Err(anyhow!(StatusCode::NO_CONTENT)),
+        }
     }
 
     pub async fn check_auth(&self, team: u32) -> Result<Auth> {
@@ -125,13 +130,13 @@ impl OpenScoutDB {
         Ok(())
     }
 }
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct Auth {
     pub _id: u32,
     pub key: String,
     pub auth: AuthLevel,
 }
-#[derive(PartialEq, Eq, PartialOrd, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, PartialOrd, Debug, Serialize, Deserialize, ToSchema)]
 pub enum AuthLevel {
     ADMIN,
     TEAM,

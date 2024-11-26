@@ -3,6 +3,7 @@ use log::info;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, iter::zip};
+use utoipa::ToSchema;
 
 use super::{Allience, Eventdata, MatchNumber};
 
@@ -84,7 +85,7 @@ impl TheBlueAllience {
         let match_request = self
             .client
             .get(format!(
-                "https://www.thebluealliance.com/api/v3/match/{}/",
+                "https://www.thebluealliance.com/api/v3/match/{}",
                 match_key
             ))
             .header("X-TBA-Auth-Key", &self.key)
@@ -101,10 +102,10 @@ impl TheBlueAllience {
                 "blue" => Some(Allience::BLUE),
                 _ => None,
             },
-            red_allience: match_request.alliences.red.get_team_nums(),
-            blue_allience: match_request.alliences.blue.get_team_nums(),
-            red_score: match_request.alliences.red.score,
-            blue_score: match_request.alliences.blue.score,
+            red_allience: match_request.alliances.red.get_team_nums(),
+            blue_allience: match_request.alliances.blue.get_team_nums(),
+            red_score: match_request.alliances.red.score,
+            blue_score: match_request.alliances.blue.score,
             red_score_breakdown: match_request.score_breakdown.red,
             blue_score_breakdown: match_request.score_breakdown.blue,
         })
@@ -145,28 +146,28 @@ pub struct TbaMatchData {
     pub red_score_breakdown: TbaScoreBreakdown,
     pub blue_score_breakdown: TbaScoreBreakdown,
 }
-
+#[allow(nonstandard_style)]
 #[derive(Debug, Serialize, Deserialize)]
 struct Oprs {
     oprs: HashMap<String, f64>,
     dprs: HashMap<String, f64>,
     ccwms: HashMap<String, f64>,
 }
-
+#[allow(nonstandard_style)]
 ///A intermidiary struct to
 #[derive(Debug, Serialize, Deserialize)]
 struct TbaSerdeMatchBreakDown {
-    alliences: TbaSerdeAlliences,
+    alliances: TbaSerdeAlliences,
     winning_alliance: String,
     score_breakdown: TbaSerdeScoreBreakdowns,
 }
-
+#[allow(nonstandard_style)]
 #[derive(Debug, Serialize, Deserialize)]
 struct TbaSerdeAlliences {
     red: TbaSerdeAllience,
     blue: TbaSerdeAllience,
 }
-
+#[allow(nonstandard_style)]
 #[derive(Debug, Serialize, Deserialize)]
 struct TbaSerdeAllience {
     score: u32,
@@ -190,17 +191,19 @@ impl TbaSerdeAllience {
         numbers
     }
 }
-
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[allow(nonstandard_style)]
+#[derive(Debug, Serialize, Deserialize)]
 struct TbaSerdeScoreBreakdowns {
     red: TbaScoreBreakdown,
     blue: TbaScoreBreakdown,
 }
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+
+#[allow(nonstandard_style)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct TbaScoreBreakdown {
-    auto_points: u32,
-    teleop_points: u32,
-    adjust_points: u32,
-    foul_points: u32,
+    autoPoints: u32,
+    teleopPoints: u32,
+    adjustPoints: u32,
+    foulPoints: u32,
     //this is not every points field provided by the tba api but they seem to be the most useful
 }
