@@ -24,7 +24,11 @@ pub struct DataManager {
     openscoutdb: openscout::OpenScoutDB,
     tba: theblueallience::TheBlueAllience,
     statbotics: statbotics::Statbotics,
-    enable_auth: bool, //TODO: event list
+    event_list: Vec<String>,
+    //TODO: I may want to add a flag that enables event checks. This would be for scenarios where
+    //the event is not defined such as scrimiges
+    enable_auth: bool,
+    enable_event_check: bool,
 }
 
 impl DataManager {
@@ -33,11 +37,16 @@ impl DataManager {
         mongo_auth: Option<MongoAuth>,
         enable_auth: Option<bool>,
     ) -> Result<Self> {
+        let tba = TheBlueAllience::new(tba_key).await?;
+        let event_keys = tba.get_event_keys().await?;
+
         Ok(Self {
             openscoutdb: openscout::OpenScoutDB::new(None, mongo_auth).await?,
-            tba: TheBlueAllience::new(tba_key).await?,
+            tba,
             statbotics: Statbotics::new().await?,
+            event_list: event_keys,
             enable_auth: enable_auth.unwrap_or(true),
+            enable_event_check: true, //TODO: put this in the config
         })
     }
 
@@ -86,11 +95,13 @@ impl DataManager {
     }
 
     pub async fn post_team_match_data(&self, data: TeamMatchReport) -> Result<()> {
+        self.check_event_key(&data.event)?;
         self.openscoutdb.post_team_match_data(data).await?;
         Ok(())
     }
 
     pub async fn post_team_pit_data(&self, data: TeamPitReport) -> Result<()> {
+        self.check_event_key(&data.event)?;
         self.openscoutdb.post_team_pit_data(data).await?;
         Ok(())
     }
@@ -143,6 +154,15 @@ impl DataManager {
             return Err(anyhow!(StatusCode::UNAUTHORIZED));
         }
 
+        Ok(())
+    }
+
+    ///This will be used on methods that write to the database to prevent data being uploaded with
+    ///a nonexistant event (typos happen).
+    fn check_event_key(&self, key: &String) -> Result<()> {
+        if !self.event_list.iter().any(|k| *key == *k) && self.enable_event_check {
+            return Err(anyhow!("The given event does not exist"));
+        }
         Ok(())
     }
 

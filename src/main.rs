@@ -64,6 +64,16 @@ struct ApiDoc;
 #[tokio::main]
 async fn main() -> () {
     let args = Args::parse();
+
+    if let Some(cmd) = args.cmd {
+        match cmd {
+            SubCommand::version => {
+                println!("{}", env!("CARGO_PKG_VERSION"));
+                return;
+            }
+        }
+    }
+
     let config: OSConfig = toml::from_str(
         fs::read_to_string(args.config)
             .expect("can't load args")

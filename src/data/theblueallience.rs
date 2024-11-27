@@ -60,7 +60,7 @@ impl TheBlueAllience {
             opr: opr_request
                 .oprs
                 .get(&format!("frc{}", team_num))
-                .ok_or(anyhow!("team not here lol"))?
+                .ok_or(anyhow!("team not at this event"))?
                 .clone(),
             dpr: opr_request
                 .dprs
@@ -114,15 +114,40 @@ impl TheBlueAllience {
     pub async fn get_event_list(&self) -> Result<Vec<Eventdata>> {
         let event_request = self
             .client
-            //TODO: set a single place to define the year
             .get(format!(
-                "https://www.thebluealliance.com/api/v3/events/2024",
+                "https://www.thebluealliance.com/api/v3/events/{}",
+                env!("CARGO_PKG_VERSION")
+                    .split(".")
+                    .into_iter()
+                    .next()
+                    .expect("This error will never trigger since the first number if the version will always be the year")
             ))
             .header("X-TBA-Auth-Key", &self.key)
             .send()
             .await?
             .error_for_status()?
             .json::<Vec<Eventdata>>()
+            .await?;
+
+        Ok(event_request)
+    }
+
+    pub async fn get_event_keys(&self) -> Result<Vec<String>> {
+        let event_request = self
+            .client
+            .get(format!(
+                "https://www.thebluealliance.com/api/v3/events/{}/keys",
+                env!("CARGO_PKG_VERSION")
+                    .split(".")
+                    .into_iter()
+                    .next()
+                    .expect("This error will never trigger since the first number if the version will always be the year")
+            ))
+            .header("X-TBA-Auth-Key", &self.key)
+            .send()
+            .await?
+            .error_for_status()?
+            .json::<Vec<String>>()
             .await?;
 
         Ok(event_request)

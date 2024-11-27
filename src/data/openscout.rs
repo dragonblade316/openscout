@@ -20,7 +20,7 @@ pub struct OpenScoutDB {
     pit_collection: Collection<TeamPitReport>,
     auth_collection: Collection<Auth>,
 }
-//TODO: going to need to figure out if the database will just be one big data base or per event db
+
 impl OpenScoutDB {
     pub async fn new(url: Option<String>, auth: Option<MongoAuth>) -> Result<Self> {
         // Replace the placeholder with your Atlas connection string
