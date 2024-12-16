@@ -3,7 +3,6 @@
 //! Values contained in the sturcts of these files should never be accessed by anything other than
 //! serde.
 
-use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 

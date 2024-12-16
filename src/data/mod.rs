@@ -5,16 +5,23 @@ pub mod theblueallience;
 use axum::{http::HeaderMap, response::IntoResponse};
 use log::warn;
 use openscout::{Auth, AuthLevel, MongoAuth};
+use rand::{prelude::Distribution, seq::IteratorRandom};
 use reqwest::StatusCode;
-use schemars::{schema_for, JsonSchema};
+use strum::IntoEnumIterator;
+use strum_macros::EnumIter;
 use utoipa::ToSchema;
 
-use std::collections::HashMap;
+use std::{
+    collections::{binary_heap::Iter, HashMap},
+    thread::current,
+};
 
 use anyhow::*;
 use serde::{Deserialize, Serialize};
 use statbotics::Statbotics;
 use theblueallience::{TbaScoreBreakdown, TheBlueAllience};
+
+use crate::{assignments, get_team_pit_data};
 
 //TODO: set a client here so that the connection pool is shared by all there services (or not, I
 //don't think there would be a benifit to this)
@@ -29,6 +36,8 @@ pub struct DataManager {
     //the event is not defined such as scrimiges
     enable_auth: bool,
     enable_event_check: bool,
+    global_match_assignment: HashMap<String, MatchScoutAssignments>,
+    team_match_assignments: HashMap<(u32, String), MatchScoutAssignments>,
 }
 
 impl DataManager {
@@ -47,6 +56,8 @@ impl DataManager {
             event_list: event_keys,
             enable_auth: enable_auth.unwrap_or(true),
             enable_event_check: true, //TODO: put this in the config
+            global_match_assignment: HashMap::new(),
+            team_match_assignments: HashMap::new(),
         })
     }
 
@@ -170,6 +181,33 @@ impl DataManager {
         self.openscoutdb.add_auth(auth).await?;
         Ok(())
     }
+
+    pub async fn get_current_match(&self, event: String) -> Result<MatchNumber> {
+        todo!()
+    }
+    pub async fn get_global_scouting_assignment(event: String) {}
+
+    pub async fn get_team_scouting_assignment(
+        &mut self,
+        event: String,
+        team_number: u32,
+    ) -> Result<ScoutingAssignment> {
+        let mut assignments = match self
+            .team_match_assignments
+            .get_mut(&(team_number, event.clone()))
+        {
+            Some(data) => data,
+            None => {
+                self.team_match_assignments
+                    .insert((team_number, event.clone()), MatchScoutAssignments::new());
+                self.team_match_assignments
+                    .get_mut(&(team_number, event.clone()))
+                    .expect("I litterally just created this entry")
+            }
+        };
+
+        todo!()
+    }
 }
 
 #[derive(Debug, Serialize, ToSchema, Deserialize)]
@@ -265,4 +303,81 @@ pub enum Allience {
 pub struct Eventdata {
     key: String,
     name: String,
+}
+
+#[derive(Debug, Clone)]
+struct MatchScoutAssignments {
+    current_match: u32,
+    matches: HashMap<u32, Match>,
+}
+
+//TODO: finish this
+impl MatchScoutAssignments {
+    pub fn new() -> Self {
+        Self {
+            current_match: 0,
+            matches: HashMap::new(),
+        }
+    }
+
+    pub fn get_assignment(&mut self, match_num: u32) -> Slot {
+        if match_num > self.current_match {
+            self.current_match = match_num;
+        }
+
+        self.matches
+            .get_mut(&match_num)
+            .get_or_insert(&mut Match::new())
+            .get_assignment()
+    }
+}
+
+#[derive(Debug, Clone)]
+struct Match {
+    slots: HashMap<Slot, bool>,
+}
+
+impl Match {
+    fn new() -> Self {
+        Self {
+            slots: Slot::iter()
+                .map(|s| {
+                    return (s, false);
+                })
+                .collect(),
+        }
+    }
+
+    fn get_assignment(&self) -> Slot {
+        //well this is mildly cursed
+        self.slots
+            .iter()
+            .find(|(slot, isfilled)| !isfilled.clone())
+            .unwrap_or((
+                &Slot::iter()
+                    .choose(&mut rand::thread_rng())
+                    .expect("This can not happen bc the iter is from the enum"),
+                &false,
+            ))
+            .0
+            .clone()
+    }
+}
+
+#[derive(Debug, Clone, EnumIter, Hash, PartialEq, Eq)]
+enum Slot {
+    RED1,
+    RED2,
+    RED3,
+    BLUE1,
+    BLUE2,
+    BLUE3,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+struct ScoutingAssignment {
+    event: String,
+    match_number: MatchNumber,
+    slot: i32, //TODO: replace this with an enum
+    team_number: u32,
 }

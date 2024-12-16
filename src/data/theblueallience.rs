@@ -1,9 +1,11 @@
 use anyhow::*;
+use core::time;
 use log::info;
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, iter::zip};
 use utoipa::ToSchema;
+
+use crate::data::Complevel;
 
 use super::{Allience, Eventdata, MatchNumber};
 
@@ -108,7 +110,62 @@ impl TheBlueAllience {
             blue_score: match_request.alliances.blue.score,
             red_score_breakdown: match_request.score_breakdown.red,
             blue_score_breakdown: match_request.score_breakdown.blue,
+            time: match_request.time,
+            predicted_time: match_request.predicted_time,
+            actual_time: match_request.actual_time,
         })
+    }
+
+    pub async fn get_match_data_list(&self, event: String) -> Result<Vec<TbaMatchData>> {
+        let matches_request = self
+            .client
+            .get(format!(
+                "https://www.thebluealliance.com/api/v3/{}/matches/",
+                event
+            ))
+            .header("X-TBA-Auth-Key", &self.key)
+            .send()
+            .await?
+            .error_for_status()?
+            .json::<Vec<TbaSerdeMatchBreakDown>>()
+            .await?;
+
+        let mut result = Vec::new();
+
+        for i in matches_request {
+            let match_number = MatchNumber {
+                number: i.match_number,
+
+                //TODO: I don't know if this method of getting the match number is correct
+                level: match i.comp_level.as_str() {
+                    "p" => crate::data::Complevel::Practice,
+                    "qm" => Complevel::Qualifier,
+                    "sf" => Complevel::Semifinal,
+                    "f" => Complevel::Final,
+                    _ => return Err(anyhow!("complevel pattern not matched")),
+                },
+            };
+
+            result.push(TbaMatchData {
+                match_number,
+                winning_allience: match i.winning_alliance.as_str() {
+                    "red" => Some(Allience::RED),
+                    "blue" => Some(Allience::BLUE),
+                    _ => None,
+                },
+                red_allience: i.alliances.red.get_team_nums(),
+                blue_allience: i.alliances.blue.get_team_nums(),
+                red_score: i.alliances.red.score,
+                blue_score: i.alliances.blue.score,
+                red_score_breakdown: i.score_breakdown.red,
+                blue_score_breakdown: i.score_breakdown.blue,
+                time: i.time,
+                predicted_time: i.predicted_time,
+                actual_time: i.actual_time,
+            });
+        }
+
+        Ok(result)
     }
 
     pub async fn get_event_list(&self) -> Result<Vec<Eventdata>> {
@@ -170,6 +227,9 @@ pub struct TbaMatchData {
     pub blue_score: u32,
     pub red_score_breakdown: TbaScoreBreakdown,
     pub blue_score_breakdown: TbaScoreBreakdown,
+    pub time: u64,
+    pub actual_time: u64,
+    pub predicted_time: u64,
 }
 #[allow(nonstandard_style)]
 #[derive(Debug, Serialize, Deserialize)]
@@ -182,9 +242,14 @@ struct Oprs {
 ///A intermidiary struct to
 #[derive(Debug, Serialize, Deserialize)]
 struct TbaSerdeMatchBreakDown {
+    match_number: u32,
+    comp_level: String,
     alliances: TbaSerdeAlliences,
     winning_alliance: String,
     score_breakdown: TbaSerdeScoreBreakdowns,
+    time: u64,
+    actual_time: u64,
+    predicted_time: u64,
 }
 #[allow(nonstandard_style)]
 #[derive(Debug, Serialize, Deserialize)]
@@ -203,7 +268,9 @@ impl TbaSerdeAllience {
     fn get_team_nums(&self) -> [u32; 3] {
         let mut numbers: [u32; 3] = [0; 3];
 
-        for (i, j) in zip(0..2, &self.team_keys) {
+        //why is this 0..3???
+        //idk but it works so who am i to question how the iterator works
+        for (i, j) in zip(0..3, &self.team_keys) {
             numbers[i] = j
                 .chars()
                 .into_iter()
