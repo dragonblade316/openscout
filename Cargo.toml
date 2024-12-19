@@ -1,6 +1,6 @@
 [package]
 name = "openscout"
-version = "2024.1.0-ALPHA"
+version = "2024.2.0-ALPHA"
 edition = "2021"
 
 [dependencies]
