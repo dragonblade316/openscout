@@ -27,44 +27,46 @@ This data can be read by any team who has access to the server (including the no
 
 ## Features and TODO
 
-Easy to use RestApi: WIP.
+Easy to use RestApi: Working.
 
-The Blue Alliance and Statbotics integration: done.
+The Blue Alliance and Statbotics integration: Done.
 
-Smart team assignments using FMS api: Auth problems.
+Smart team assignments: WIP.
 
-MongoDB database: working.
+MongoDB database: Working.
 
 Well-defined data structures: Done (probably).
 
-JSON Schemas: Not started.
+JSON Schemas: Done through Openapi.
 
-Per Team Auth: Not started (pretty easy I think).
+Swagger UI for api testing: Working.
 
-Easy Toml Configuration: Not Started.
+Per Team Auth: Done but needs to be reworked to be more like standard apis (this will come at a slight usability cost but oh well (might build a system for this)).
 
-Callbacks and Webhooks: I will work on this if I have time and Axum supports it.
+Easy Toml Configuration: Working.
 
-Documentation: I have not figured out what this will look like yet.
+Callbacks and Webhooks: I will work on this if I have time and Axum supports it (update: I'ma do call backs through websockets later.
+
+Documentation: Done with Swagger.
 
 ## Versioning Scheme
 
-The version is split into 4 parts, Season, Major, Minor, and Tag
+The version number is split into 4 parts, Season, Major, Minor, and Stability Tag.
 
-Versions of openscout from different seasons are not compadible as the season spesific datatypes have been replaced.
+Versions of Openscout from different seasons are not compatible as the season-specific datatypes have been replaced.
 
 
-Season will change every season (hopefully this was obvious)
+Season will change every season (hopefully this was obvious).
 
-A change of the major version implies breaking changes to the api or significant new fetures.
+A change of the major version implies breaking changes to the API or significant new features.
 
-A change to the minor version implies bug fixes or fetures that will not break the current api.
+A change to the minor version implies bug fixes or features that will not break the current API.
 
-The tag will either be WIP, Alpha, Beta, Nightly, and Stable. This will indicate how confident I am that everything will work. WIP and Alpha will likely never be seen again after the 1st beta.
+The tag will either be WIP, Alpha, Beta, Nightly, or Stable. This will indicate how confident I am that everything will work. WIP and Alpha will likely never be seen again after the 1st beta.
 
 ## FAQ
 
-Will there be an official openscout client: Probably not, the project is designed to require as little effort to maintain as possible and dealing with a changing UI would go against that. However, I am hoping to have at least one team make their scouting app open source. This will mean that teams should have access to an Openscout client even if they dod not have the resources to make their own.
+Will there be an official openscout client: Probably not, the project is designed to require as little effort to maintain as possible, and dealing with a changing UI would go against that. However, I am hoping to have at least one team make their scouting app open source. This will mean that teams should have access to an Openscout client even if they dod not have the resources to make their own.
 
 Can we prevent other teams from querying our scouting data: By hosting your own instance and not allowing other teams to access it, yes. However, the server itself will (most likely) not support any form of access control. WIP
 
@@ -73,5 +75,5 @@ How do you decide the default fields: Mostly guessing and asking teams. Major ve
 Did anyone actually ask: No, I made these up.
 
 ## Contributing
-If you want to contribute to this project feel free to open an issue, submit a pull request, or contact me.
-You will be able to find me on Cheif Delphi and the FRC Scouting and Statagy discord server. (I am dragonblade316 on both)
+If you want to contribute to this project, feel free to open an issue, submit a pull request, or contact me.
+You will be able to find me on Cheif Delphi and the FRC Scouting and Statagy Discord server. (I am dragonblade316 on both)
