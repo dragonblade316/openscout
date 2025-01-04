@@ -256,6 +256,8 @@ pub struct TeamMatchReport {
     pub team_spesific_data: Option<HashMap<String, serde_json::Value>>,
 }
 
+impl TeamMatchReport 
+
 #[derive(Deserialize, Serialize, ToSchema)]
 pub struct TeamPitReport {
     team_number: u32,
