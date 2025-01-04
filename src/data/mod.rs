@@ -117,7 +117,8 @@ impl DataManager {
         Ok(())
     }
 
-    pub async fn get_team_match_data(
+    ///Gives the last recorded team match report
+    pub async fn get_last_team_match_data(
         &self,
         team_number: u32,
         match_number: MatchNumber,
@@ -128,12 +129,111 @@ impl DataManager {
             .await
     }
 
-    pub async fn get_team_pit_data(
+    ///
+    pub async fn get_avg_team_match_data(
+        &self,
+        team_number: u32,
+        match_number: MatchNumber,
+        event: String,
+    ) {
+    }
+
+    pub async fn get_all_team_match_data_by_team(
+        &self,
+        team_number: u32,
+        recording_team: u32,
+        match_number: MatchNumber,
+        event: String,
+    ) {
+        self.openscoutdb.get_all_team_match_data_by_team(
+            team_number,
+            recording_team,
+            match_number,
+            event,
+        );
+    }
+
+    pub async fn get_team_match_data_by_induvidual(
+        &self,
+        team_number: u32,
+        recording_team: u32,
+        recording_induvidual: u32,
+        match_number: MatchNumber,
+        event: String,
+    ) {
+    }
+
+    pub async fn get_last_team_match_data_by_team(
+        &self,
+        team_number: u32,
+        recording_team: u32,
+        match_number: MatchNumber,
+        event: String,
+    ) {
+    }
+
+    pub async fn get_all_team_match_data(
+        team_number: u32,
+        match_number: MatchNumber,
+        event: String,
+    ) {
+    }
+
+    pub async fn get_last_team_pit_data(
         &self,
         team_number: u32,
         event: String,
     ) -> Result<TeamPitReport> {
-        self.openscoutdb.get_team_pit_data(team_number, event).await
+        self.openscoutdb
+            .get_last_team_pit_data(team_number, event)
+            .await
+    }
+
+    ///
+    pub async fn get_avg_team_pit_data(
+        &self,
+        team_number: u32,
+        event: String,
+    ) -> Result<TeamPitReport> {
+        self.openscoutdb
+            .get_avg_team_pit_data(team_number, event)
+            .await
+    }
+
+    pub async fn get_all_team_pit_data_by_team(
+        &self,
+        team_number: u32,
+        recording_team: u32,
+        event: String,
+    ) -> Result<Vec<TeamPitReport>> {
+        todo!()
+    }
+
+    pub async fn get_team_pit_data_by_induvidual(
+        &self,
+        team_number: u32,
+        recording_team: u32,
+        recording_induvidual: u32,
+        event: String,
+    ) -> Result<TeamPitReport> {
+        todo!()
+    }
+
+    pub async fn get_last_team_pit_data_by_team(
+        &self,
+        team_number: u32,
+        recording_team: u32,
+        event: String,
+    ) -> Result<TeamPitReport> {
+        todo!()
+    }
+
+    pub async fn get_all_team_pit_data(
+        &self,
+        team_number: u32,
+        event: String,
+    ) -> Result<Vec<TeamPitReport>> {
+        todo!()
     }
 
     pub async fn get_event_data(&self) -> Result<Vec<Eventdata>> {
@@ -256,7 +356,7 @@ pub struct TeamMatchReport {
     pub team_spesific_data: Option<HashMap<String, serde_json::Value>>,
 }
 
-impl TeamMatchReport 
+//impl TeamMatchReport
 
 #[derive(Deserialize, Serialize, ToSchema)]
 pub struct TeamPitReport {

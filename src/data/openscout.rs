@@ -103,8 +103,56 @@ impl OpenScoutDB {
         }
     }
 
+    pub async fn get_avg_team_match_data(
+        &self,
+        team_number: u32,
+        match_number: MatchNumber,
+        event: String
+    ) {
+        
+    }
+
+    pub async fn get_all_team_match_data_by_team(
+        &self,
+        team_number: u32,
+        recording_team: u32,
+        match_number: MatchNumber,
+        event: String
+    ) {
+        
+    }
+
+    pub async fn get_team_match_data_by_induvidual(
+         &self,
+        team_number: u32,
+        recording_team: u32,
+        recording_induvidual: u32,
+        match_number: MatchNumber,
+        event: String
+    ) {
+        
+    }
+
+    pub async fn get_last_team_match_data_by_team(
+        &self,
+        team_number: u32,
+        recording_team: u32,
+        match_number: MatchNumber,
+        event: String
+    ) {
+        
+    }
+
+    pub async fn get_all_team_match_data(
+        team_number: u32,
+        match_number: MatchNumber,
+        event: String
+    ) {
+        
+    }
+
     //TODO: check if there is data here and return the appropriet status code if not
-    pub async fn get_team_pit_data(&self, team: u32, event: String) -> Result<TeamPitReport> {
+    pub async fn get_last_team_pit_data(&self, team: u32, event: String) -> Result<TeamPitReport> {
         let data = self
             .pit_collection
             .find_one(doc! {"$and": vec![
@@ -118,6 +166,52 @@ impl OpenScoutDB {
             None => Err(anyhow!(StatusCode::NO_CONTENT)),
         }
     }
+
+    
+    ///
+    pub async fn get_avg_team_pit_data(
+        &self,
+        team_number: u32,
+        event: String
+    ) -> Result<TeamPitReport> {
+        
+    }
+
+    pub async fn get_all_team_pit_data_by_team(
+        &self,
+        team_number: u32,
+        recording_team: u32,
+        event: String
+    ) -> Result<Vec<TeamPitReport>> {
+        
+    }
+
+    pub async fn get_team_pit_data_by_induvidual(
+         &self,
+        team_number: u32,
+        recording_team: u32,
+        recording_induvidual: u32,
+        event: String
+    ) -> Result<TeamPitReport> {
+        
+    }
+
+    pub async fn get_last_team_pit_data_by_team(
+        &self,
+        team_number: u32,
+        recording_team: u32,
+        event: String
+    ) -> Result<TeamPitReport> {
+        
+    }
+
+    pub async fn get_all_team_pit_data(
+        team_number: u32,
+        event: String
+    ) -> Result<Vec<TeamPitReport>> {
+        
+    }
+
 
     pub async fn check_auth(&self, team: u32) -> Result<Auth> {
         let data = self.auth_collection.find(doc! {"_id": team}).await?;

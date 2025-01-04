@@ -177,7 +177,7 @@ async fn post_team_pit_data(
     Ok(())
 }
 
-#[utoipa::path(get, path = "/teammatchdata/{team_number}/{event}/{complevel}/{match_num}", responses((status = OK, body = TeamMatchReport)), params(
+#[utoipa::path(get, path = "/teammatchdata/last/{team_number}/{event}/{complevel}/{match_num}", responses((status = OK, body = TeamMatchReport)), params(
     ("team_number" = u32, Path, description = "the team number"),
     ("event" = String, Path, description = "The event id (blue alliance format)"),
     ("complevel" = Complevel, Path, description = "The level of competition"),
