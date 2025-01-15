@@ -7,7 +7,12 @@ use super::{
     super::{TeamMatchReport, TeamPitReport},
     Complevel, MatchNumber,
 };
-use mongodb::{self, bson::doc, options::Credential, Collection};
+use mongodb::{
+    self,
+    bson::doc,
+    options::{Credential, FindOptions},
+    Collection,
+};
 use mongodb::{
     options::{ClientOptions, ServerApi, ServerApiVersion},
     Client,
@@ -74,7 +79,7 @@ impl OpenScoutDB {
         Ok(())
     }
 
-    pub async fn get_team_match_data(
+    pub async fn get_last_team_match_data(
         &self,
         team: u32,
         match_number: MatchNumber,
@@ -95,6 +100,7 @@ impl OpenScoutDB {
             doc! {"match_number.level": name},
             doc! {"event": event},
             ]})
+            .sort(doc! {"timestamp": -1})
             .await?;
 
         match data {
@@ -107,9 +113,9 @@ impl OpenScoutDB {
         &self,
         team_number: u32,
         match_number: MatchNumber,
-        event: String
-    ) {
-        
+        event: String,
+    ) -> Result<TeamMatchReport> {
+        todo!()
     }
 
     pub async fn get_all_team_match_data_by_team(
@@ -117,20 +123,56 @@ impl OpenScoutDB {
         team_number: u32,
         recording_team: u32,
         match_number: MatchNumber,
-        event: String
-    ) {
-        
+        event: String,
+    ) -> Result<Vec<TeamMatchReport>> {
+        let mut cursor = self
+            .match_collection
+            .find(doc! {"$and": vec![
+            doc! {"team_number": team_number},
+            doc! {"match_number.number": match_number.number},
+            doc! {"match_number.level": match_number.get_tba_string()?},
+            doc! {"event": event},
+            ]})
+            .await?;
+
+        let mut data: Vec<TeamMatchReport> = Vec::new();
+
+        while cursor.advance().await? {
+            data.push(cursor.deserialize_current()?);
+        }
+
+        if data.len() == 0 {
+            return Err(anyhow!(StatusCode::NO_CONTENT));
+        }
+
+        Ok(data)
     }
 
+    ///
     pub async fn get_team_match_data_by_induvidual(
-         &self,
+        &self,
         team_number: u32,
         recording_team: u32,
-        recording_induvidual: u32,
+        recording_induvidual: String,
         match_number: MatchNumber,
-        event: String
-    ) {
-        
+        event: String,
+    ) -> Result<TeamMatchReport> {
+        let data = self
+            .match_collection
+            .find_one(doc! {"$and": vec![
+            doc! {"team_number": team_number},
+            doc! {"recording_team_number": recording_team},
+            doc! {"team_member": recording_induvidual},
+            doc! {"match_number.number": match_number.number},
+            doc! {"match_number.level": match_number.get_tba_string()?},
+            doc! {"event": event},
+            ]})
+            .await?;
+
+        match data {
+            Some(data) => Ok(data),
+            None => Err(anyhow!(StatusCode::NO_CONTENT)),
+        }
     }
 
     pub async fn get_last_team_match_data_by_team(
@@ -138,17 +180,49 @@ impl OpenScoutDB {
         team_number: u32,
         recording_team: u32,
         match_number: MatchNumber,
-        event: String
-    ) {
-        
+        event: String,
+    ) -> Result<TeamMatchReport> {
+        let data = self
+            .match_collection
+            .find_one(doc! {"$and": vec![
+            doc! {"team_number": team_number},
+            doc! {"match_number.number": match_number.number},
+            doc! {"match_number.level": match_number.get_tba_string()?},
+            doc! {"event": event},
+            doc! {"recording_team_number": recording_team}
+            ]})
+            .sort(doc! {"timestamp": -1})
+            .await?
+            .ok_or(return Err(anyhow!(StatusCode::NO_CONTENT)));
     }
 
     pub async fn get_all_team_match_data(
+        &self,
         team_number: u32,
         match_number: MatchNumber,
-        event: String
-    ) {
-        
+        event: String,
+    ) -> Result<Vec<TeamMatchReport>> {
+        let mut cursor = self
+            .match_collection
+            .find(doc! {"$and": vec![
+            doc! {"team_number": team_number},
+            doc! {"match_number.number": match_number.number},
+            doc! {"match_number.level": match_number.get_tba_string()?},
+            doc! {"event": event},
+            ]})
+            .await?;
+
+        let mut data: Vec<TeamMatchReport> = Vec::new();
+
+        while cursor.advance().await? {
+            data.push(cursor.deserialize_current()?);
+        }
+
+        if data.len() == 0 {
+            return Err(anyhow!(StatusCode::NO_CONTENT));
+        }
+
+        Ok(data)
     }
 
     //TODO: check if there is data here and return the appropriet status code if not
@@ -159,6 +233,7 @@ impl OpenScoutDB {
             doc! {"team_number": team},
             doc! {"event": event}
             ]})
+            .sort(doc! {"timestamp": -1})
             .await?;
 
         match data {
@@ -167,51 +242,108 @@ impl OpenScoutDB {
         }
     }
 
-    
     ///
     pub async fn get_avg_team_pit_data(
         &self,
         team_number: u32,
-        event: String
+        event: String,
     ) -> Result<TeamPitReport> {
-        
+        todo!()
     }
 
     pub async fn get_all_team_pit_data_by_team(
         &self,
         team_number: u32,
         recording_team: u32,
-        event: String
+        event: String,
     ) -> Result<Vec<TeamPitReport>> {
-        
+        let mut cursor = self
+            .pit_collection
+            .find(doc! {"$and": vec![
+            doc! {"team_number": team_number},
+            doc! {"event": event},
+            doc! {"recording_team": recording_team},
+            ]})
+            .await?;
+
+        let mut data: Vec<TeamPitReport> = Vec::new();
+
+        while cursor.advance().await? {
+            data.push(cursor.deserialize_current()?);
+        }
+
+        if data.len() == 0 {
+            return Err(anyhow!(StatusCode::NO_CONTENT));
+        }
+
+        Ok(data)
     }
 
     pub async fn get_team_pit_data_by_induvidual(
-         &self,
+        &self,
         team_number: u32,
         recording_team: u32,
-        recording_induvidual: u32,
-        event: String
+        recording_induvidual: String,
+        event: String,
     ) -> Result<TeamPitReport> {
-        
+        let data = self
+            .pit_collection
+            .find_one(doc! {"$and": vec![
+            doc! {"team_number": team_number},
+            doc! {"event": event},
+            doc! {"recording_team": recording_team},
+            doc! {"team_member": recording_induvidual}
+            ]})
+            .await?;
+
+        match data {
+            Some(data) => Ok(data),
+            None => Err(anyhow!(StatusCode::NO_CONTENT)),
+        }
     }
 
     pub async fn get_last_team_pit_data_by_team(
         &self,
         team_number: u32,
         recording_team: u32,
-        event: String
+        event: String,
     ) -> Result<TeamPitReport> {
-        
+        self.pit_collection
+            .find_one(doc! {"$and": vec![
+                doc! {"team_number": team_number},
+                doc! {"event": event},
+                doc! {"recording_team": recording_team},
+            ]})
+            .sort(doc! {"timestamp": -1})
+            .await?
+            .ok_or(return Err(anyhow!(StatusCode::NO_CONTENT)));
     }
 
     pub async fn get_all_team_pit_data(
+        &self,
         team_number: u32,
-        event: String
+        event: String,
     ) -> Result<Vec<TeamPitReport>> {
-        
-    }
+        let mut cursor = self
+            .pit_collection
+            .find(doc! {"$and": vec![
+            doc! {"team_number": team_number},
+            doc! {"event": event},
+            ]})
+            .await?;
 
+        let mut data: Vec<TeamPitReport> = Vec::new();
+
+        while cursor.advance().await? {
+            data.push(cursor.deserialize_current()?);
+        }
+
+        if data.len() == 0 {
+            return Err(anyhow!(StatusCode::NO_CONTENT));
+        }
+
+        Ok(data)
+    }
 
     pub async fn check_auth(&self, team: u32) -> Result<Auth> {
         let data = self.auth_collection.find(doc! {"_id": team}).await?;

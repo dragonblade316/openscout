@@ -14,6 +14,12 @@ pub struct MatchData2024 {
     pub endgame: Endgame,
 }
 
+impl MatchData2024 {
+    pub fn avg(data: Vec<MatchData2024>) -> MatchData2024 {
+        todo!()
+    }
+}
+
 #[derive(Deserialize, Serialize, ToSchema)]
 pub struct PitData2024 {
     speaker: bool,

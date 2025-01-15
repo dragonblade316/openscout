@@ -3,10 +3,12 @@ pub mod season; //data structs
 pub mod statbotics;
 pub mod theblueallience;
 use axum::{http::HeaderMap, response::IntoResponse};
+use chrono::{TimeZone, Utc};
 use log::warn;
 use openscout::{Auth, AuthLevel, MongoAuth};
 use rand::{prelude::Distribution, seq::IteratorRandom};
 use reqwest::StatusCode;
+use serde_json::Value;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 use utoipa::ToSchema;
@@ -125,7 +127,7 @@ impl DataManager {
         event: String,
     ) -> Result<TeamMatchReport> {
         self.openscoutdb
-            .get_team_match_data(team_number, match_number, event)
+            .get_last_team_match_data(team_number, match_number, event)
             .await
     }
 
@@ -157,10 +159,19 @@ impl DataManager {
         &self,
         team_number: u32,
         recording_team: u32,
-        recording_induvidual: u32,
+        recording_induvidual: String,
         match_number: MatchNumber,
         event: String,
-    ) {
+    ) -> Result<TeamMatchReport> {
+        self.openscoutdb
+            .get_team_match_data_by_induvidual(
+                team_number,
+                recording_team,
+                recording_induvidual,
+                match_number,
+                event,
+            )
+            .await
     }
 
     pub async fn get_last_team_match_data_by_team(
@@ -169,14 +180,21 @@ impl DataManager {
         recording_team: u32,
         match_number: MatchNumber,
         event: String,
-    ) {
+    ) -> Result<TeamMatchReport> {
+        self.openscoutdb
+            .get_last_team_match_data_by_team(team_number, recording_team, match_number, event)
+            .await
     }
 
     pub async fn get_all_team_match_data(
+        &self,
         team_number: u32,
         match_number: MatchNumber,
         event: String,
-    ) {
+    ) -> Result<Vec<TeamMatchReport>> {
+        self.openscoutdb
+            .get_all_team_match_data(team_number, match_number, event)
+            .await
     }
 
     pub async fn get_last_team_pit_data(
@@ -206,17 +224,26 @@ impl DataManager {
         recording_team: u32,
         event: String,
     ) -> Result<Vec<TeamPitReport>> {
-        todo!()
+        self.openscoutdb
+            .get_all_team_pit_data_by_team(team_number, recording_team, event)
+            .await
     }
 
     pub async fn get_team_pit_data_by_induvidual(
         &self,
         team_number: u32,
         recording_team: u32,
-        recording_induvidual: u32,
+        recording_induvidual: String,
         event: String,
     ) -> Result<TeamPitReport> {
-        todo!()
+        self.openscoutdb
+            .get_team_pit_data_by_induvidual(
+                team_number,
+                recording_team,
+                recording_induvidual,
+                event,
+            )
+            .await
     }
 
     pub async fn get_last_team_pit_data_by_team(
@@ -225,7 +252,9 @@ impl DataManager {
         recording_team: u32,
         event: String,
     ) -> Result<TeamPitReport> {
-        todo!()
+        self.openscoutdb
+            .get_last_team_pit_data_by_team(team_number, recording_team, event)
+            .await
     }
 
     pub async fn get_all_team_pit_data(
@@ -233,7 +262,9 @@ impl DataManager {
         team_number: u32,
         event: String,
     ) -> Result<Vec<TeamPitReport>> {
-        todo!()
+        self.openscoutdb
+            .get_all_team_pit_data(team_number, event)
+            .await
     }
 
     pub async fn get_event_data(&self) -> Result<Vec<Eventdata>> {
@@ -343,6 +374,9 @@ pub struct MatchData {
 pub struct TeamMatchReport {
     //unchanging
     pub team_number: u32,
+
+    //required so that the person who recor:Qded the data can be tracked
+    pub recording_team_number: u32,
     pub team_member: String,
 
     pub event: String,
@@ -354,6 +388,55 @@ pub struct TeamMatchReport {
 
     //does not change but should still never be accessed
     pub team_spesific_data: Option<HashMap<String, serde_json::Value>>,
+
+    //unix epoch
+    pub timestamp: u64,
+}
+
+impl TeamMatchReport {
+    pub fn avg(data: Vec<Self>) -> Result<TeamMatchReport> {
+        //check to make sure data is from the same team and match
+
+        let mut team_spesific_data: HashMap<String, Value> = HashMap::new();
+        data.iter().for_each(|x| {
+            if let Some(tsd) = x.team_spesific_data {
+                team_spesific_data.extend(tsd)
+            }
+        });
+
+        Ok(Self {
+            team_number: match data.iter().all(|x| x.team_number == data[0].team_number) {
+                true => data[0].team_number,
+                false => 0,
+            },
+
+            recording_team_number: match data
+                .iter()
+                .all(|x| x.recording_team_number == data[0].recording_team_number)
+            {
+                true => data[0].recording_team_number,
+                false => 0,
+            },
+
+            team_member: match data.iter().all(|x| x.team_member == data[0].team_member) {
+                true => data[0].team_member.clone(),
+                false => "".to_string(),
+            },
+
+            notes: "".to_string(),
+
+            event: match data.iter().all(|x| x.event == data[0].event) {
+                true => data[0].event.clone(),
+                false => "".to_string(),
+            },
+
+            match_number: todo!(),
+
+            data: season::MatchData2024::avg(),
+            team_spesific_data: Some(team_spesific_data),
+            timestamp: todo!(),
+        })
+    }
 }
 
 //impl TeamMatchReport
@@ -361,6 +444,7 @@ pub struct TeamMatchReport {
 #[derive(Deserialize, Serialize, ToSchema)]
 pub struct TeamPitReport {
     team_number: u32,
+    recording_team: u32,
     team_member: String,
     event: String,
 

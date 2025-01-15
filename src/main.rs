@@ -190,7 +190,7 @@ async fn get_team_match_data(
 ) -> Result<Json<TeamMatchReport>, AppError> {
     dm.check_auth(&headers, AuthLevel::TEAM).await?;
     Ok(Json(
-        dm.get_team_match_data(
+        dm.get_last_team_match_data(
             matchd.team_num,
             MatchNumber {
                 number: matchd.match_num,
@@ -202,7 +202,7 @@ async fn get_team_match_data(
     ))
 }
 
-#[utoipa::path(get, path = "/teampitdata/{team_num}/{event}", responses((status = OK, body = TeamPitReport)), params(
+#[utoipa::path(get, path = "/teampitdata/last/{team_num}/{event}", responses((status = OK, body = TeamPitReport)), params(
     ("team_num" = u32, Path, description = "The team number"),
     ("event" = String, Path, description = "The event id (blue alliance format)")
 )) ]
@@ -212,7 +212,7 @@ async fn get_team_pit_data(
     Path((team_num, event)): Path<(u32, String)>,
 ) -> Result<Json<TeamPitReport>, AppError> {
     dm.check_auth(&headers, AuthLevel::TEAM).await?;
-    Ok(Json(dm.get_team_pit_data(team_num, event).await?))
+    Ok(Json(dm.get_last_team_pit_data(team_num, event).await?))
 }
 
 async fn get_scouting_assignment() {}
